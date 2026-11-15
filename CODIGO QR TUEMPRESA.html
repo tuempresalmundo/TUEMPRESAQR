@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>TUEMPRESAQR</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: escenario 3D grande a la izquierda, panel de control a la derecha; en móvil se apilan. */
+:root{
+  --bg:#F1ECE2; --surface:#FBF8F2; --surface-2:#EDE6D9; --ink:#2A2620; --muted:#776D60;
+  --line:#E0D7C7; --accent:#3F6B3A; --accent-ink:#FFFFFF; --ok:#2F7A3B; --warn:#A5531C;
+  --font-display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --font-body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1B1915; --surface:#25221D; --surface-2:#2E2A24; --ink:#EFE8DC; --muted:#A69C8C;
+  --line:#3A352D; --accent:#93C277; --accent-ink:#13200E; --ok:#8FD08A; --warn:#E9A06A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1B1915; --surface:#25221D; --surface-2:#2E2A24; --ink:#EFE8DC; --muted:#A69C8C;
+  --line:#3A352D; --accent:#93C277; --accent-ink:#13200E; --ok:#8FD08A; --warn:#E9A06A; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.app{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{width:22px;height:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.mark i{background:var(--accent);border-radius:2px}.mark i.o{background:transparent}
+h1{font-family:var(--font-display);font-weight:700;font-size:28px;letter-spacing:-.01em;margin:0}
+.tag{margin:0;color:var(--muted);max-width:52ch}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;height:min(76vh,720px);min-height:420px;border-radius:22px;overflow:hidden;cursor:pointer}
+@media (max-width:900px){.stage{height:min(92vw,560px);min-height:340px}}
+#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font:500 13px var(--font-body);color:var(--muted);
+  background:color-mix(in srgb,var(--surface) 85%,transparent);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;white-space:nowrap}
+.verify{position:absolute;top:14px;left:14px;font:500 12px var(--font-body);padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);display:flex;align-items:center;gap:6px}
+.verify::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.verify.ok{color:var(--ok)}.verify.warn{color:var(--warn)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface-2);padding:4px;border-radius:12px}
+.seg.three{grid-template-columns:repeat(3,1fr) auto}
+.seg button{font:500 13px var(--font-body);color:var(--ink);background:transparent;border:0;border-radius:9px;padding:8px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.seg button[aria-pressed="true"],.seg button[aria-selected="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg svg{width:16px;height:16px;flex:none}
+.fields{display:flex;flex-direction:column;gap:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;color:var(--muted)}
+input,textarea,select{font:15px var(--font-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meta{font:12px var(--font-mono);color:var(--muted);background:var(--surface-2);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.meta b{color:var(--ink);font-weight:500}
+.meta.err{color:var(--warn)}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.primary{font:600 15px var(--font-body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:12px;cursor:pointer;width:100%}
+.dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ghost{font:500 13px var(--font-body);background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 8px;cursor:pointer}
+.ghost:hover,.seg button:hover{background:var(--surface-2)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.facts{grid-template-columns:minmax(0,1fr)}}
+.fact{border-top:1px solid var(--line);padding-top:12px}
+.fact h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0 0 4px;text-wrap:balance}
+.fact p{margin:0;color:var(--muted);max-width:44ch}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:14px;padding:9px 16px;border-radius:999px;z-index:20}
+.modal{position:fixed;inset:0;background:rgba(20,18,14,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:30}
+.modal .box{background:var(--surface);border-radius:18px;padding:18px;max-width:480px;width:100%;display:flex;flex-direction:column;gap:12px}
+.modal img{width:100%;border-radius:10px;background:#fff}
+.modal p{margin:0;color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){#scene{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i class="o"></i><i></i><i></i><i></i></span>
+      <h1>TUEMPRESAQR</h1>
+    </div>
+    <p class="tag">Códigos QR que no caducan. Cada enlace crece como un árbol; tócalo y se pliega en el código para escanear.</p>
+  </header>
+
+  <main class="layout">
+    <section class="stage" id="stage" aria-label="Vista 3D del código">
+      <canvas id="scene"></canvas>
+      <div class="verify" id="verify" hidden></div>
+      <button class="hint" id="hint" type="button">Toca el árbol para ver el QR</button>
+    </section>
+
+    <aside class="panel">
+      <div>
+        <p class="label">Qué guarda el código</p>
+        <div class="seg" role="tablist" id="types">
+          <button type="button" role="tab" data-type="link" aria-selected="true">Enlace</button>
+          <button type="button" role="tab" data-type="wa" aria-selected="false">WhatsApp</button>
+          <button type="button" role="tab" data-type="wifi" aria-selected="false">Wi‑Fi</button>
+          <button type="button" role="tab" data-type="text" aria-selected="false">Texto</button>
+        </div>
+      </div>
+
+      <form class="fields" id="form" autocomplete="off">
+        <div class="field" data-for="link"><label for="f-url">Dirección web</label>
+          <input id="f-url" type="text" inputmode="url" value="https://tarjetasdigitales.site" spellcheck="false"></div>
+        <div class="field" data-for="wa" hidden><label for="f-phone">Número con código de país</label>
+          <input id="f-phone" type="tel" placeholder="57 300 123 4567"></div>
+        <div class="field" data-for="wa" hidden><label for="f-msg">Mensaje inicial (opcional)</label>
+          <input id="f-msg" type="text" placeholder="Hola, quiero más información"></div>
+        <div class="field" data-for="wifi" hidden><label for="f-ssid">Nombre de la red</label>
+          <input id="f-ssid" type="text" placeholder="MiNegocio_WiFi"></div>
+        <div class="row2" data-for="wifi" hidden>
+          <div class="field"><label for="f-pass">Contraseña</label><input id="f-pass" type="text" placeholder="contraseña"></div>
+          <div class="field"><label for="f-sec">Seguridad</label>
+            <select id="f-sec"><option value="WPA">WPA/WPA2</option><option value="WEP">WEP</option><option value="nopass">Abierta</option></select></div>
+        </div>
+        <div class="field" data-for="text" hidden><label for="f-text">Texto libre</label>
+          <textarea id="f-text" placeholder="Cualquier texto, hasta unos 1.600 caracteres"></textarea></div>
+      </form>
+
+      <div class="meta" id="meta" aria-live="polite"></div>
+
+      <div>
+        <p class="label">Estación</p>
+        <div class="seg three" id="seasons">
+          <button type="button" data-season="spring" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2.2"/><path d="M12 9.8C10 6 12 3.5 12 3.5s2 2.5 0 6.3zM14.2 12c3.8-2 6.3 0 6.3 0s-2.5 2-6.3 0zM12 14.2c2 3.8 0 6.3 0 6.3s-2-2.5 0-6.3zM9.8 12C6 14 3.5 12 3.5 12S6 10 9.8 12z"/></svg>Primavera</button>
+          <button type="button" data-season="summer" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>Verano</button>
+          <button type="button" data-season="autumn" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zM5 19l7-7"/></svg>Otoño</button>
+          <button type="button" id="sound" aria-pressed="false" aria-label="Sonido ambiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path id="snd-wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" opacity=".3"/></svg></button>
+        </div>
+      </div>
+
+      <div>
+        <p class="label" id="sw-label">Color de las hojas</p>
+        <div class="swatches" id="swatches" role="group" aria-labelledby="sw-label"></div>
+      </div>
+      <button class="primary" id="toggle" type="button">Ver el código QR</button>
+
+      <div>
+        <p class="label">Descargar</p>
+        <div class="dl">
+          <button class="ghost" type="button" data-dl="png">PNG a color</button>
+          <button class="ghost" type="button" data-dl="bw">PNG blanco y negro</button>
+          <button class="ghost" type="button" data-dl="svg">SVG para imprimir</button>
+          <button class="ghost" type="button" data-dl="3d">Imagen del árbol</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="facts" aria-label="Por qué no caducan">
+    <div class="fact"><h2>El contenido va dentro del código</h2><p>Los puntos del QR guardan el enlace tal cual. Ningún acortador ni servicio intermedio decide si funciona.</p></div>
+    <div class="fact"><h2>No hay plan que vencer</h2><p>Se genera en tu navegador, sin cuenta ni servidor. Mientras tu enlace exista, el código lo abre, hoy o dentro de diez años.</p></div>
+    <div class="fact"><h2>Comprobado al plegarse</h2><p>Cada vez que el árbol vuelve a ser QR, la página lo lee como lo haría un teléfono y te avisa si el color quedó sin contraste.</p></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- datos de estaciones y colores ---------- */
+const SWATCHES = [
+  {name:'Cerezo', c:'#F2A2C0'}, {name:'Lila', c:'#C39AF0'}, {name:'Coral', c:'#EE6F6A'},
+  {name:'Ámbar', c:'#F0A23A'}, {name:'Cielo', c:'#8CC6F2'}, {name:'Hoja', c:'#6CBF5A'}, {name:'Nieve', c:'#E6ECF0'}
+];
+const SEASONS = {
+  spring:{grass:'#7CC965', grassQR:'#2E6A2A', swatch:0, label:'Primavera'},
+  summer:{grass:'#5AA94A', grassQR:'#245A1F', swatch:5, label:'Verano'},
+  autumn:{grass:'#D9B24A', grassQR:'#6A4A12', swatch:3, label:'Otoño'}
+};
+const AUTUMN_MIX = ['#F0A23A','#E3702B','#F3C24A','#C9472B','#E88A2E'];
+const TRUNK = ['#7A4A2A','#8B5A34','#6B3F22','#946238'];
+
+/* ---------- estado ---------- */
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem('raizqr')||'{}'); }catch(e){ return {}; } },
+  set(v){ try{ localStorage.setItem('raizqr', JSON.stringify(v)); }catch(e){} }
+};
+const saved = store.get();
+const state = { type: saved.type||'link', season: saved.season||'autumn', swatch: (saved.swatch ?? null), text:'' };
+if(state.swatch===null) state.swatch = SEASONS[state.season].swatch;
+['url','phone','msg','ssid','pass','sec','text'].forEach(k=>{ if(saved[k]!=null){ const el=$('#f-'+k); if(el) el.value=saved[k]; } });
+
+/* ---------- utilidades ---------- */
+function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){ let a=seed>>>0; return ()=>{ a=(a+0x6D2B79F5)>>>0; let t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+function h3(x,y,z){ let h=Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(z|0,2147483647); h=Math.imul(h^(h>>>13),1274126177); return ((h^(h>>>16))>>>0)/4294967296; }
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const easeIO=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeOutBack=t=>{const c1=1.5,c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);};
+function jitter(hex, r, dh, ds, dl){ const c=new THREE.Color(hex), h={}; c.getHSL(h); c.setHSL((h.h+(r()-.5)*dh+1)%1, clamp(h.s+(r()-.5)*ds), clamp(h.l+(r()-.5)*dl)); return c; }
+/* color oscuro para el modo QR: mismo tono, luminosidad baja para que el lector lo vea */
+function qrTone(col, r){ const h={}; col.getHSL(h); const s = h.s<0.15 ? h.s : Math.max(h.s,0.5); return new THREE.Color().setHSL(h.h, s, clamp(Math.min(h.l*0.5,0.28) + (r()-.5)*0.04, 0.1, 0.3)); }
+function finderTone(c){ const o={}; c.getHSL(o); return new THREE.Color().setHSL(o.h,o.s,Math.max(0.08,o.l-0.07)); }
+function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+
+/* ---------- contenido del QR ---------- */
+function normUrl(v){ v=v.trim(); if(!v) return ''; if(/^[a-z][a-z0-9+.-]*:/i.test(v)) return v; return 'https://'+v; }
+function wifiEsc(v){ return v.replace(/([\\;,:"])/g,'\\$1'); }
+function buildText(){
+  const t=state.type;
+  if(t==='link') return normUrl($('#f-url').value);
+  if(t==='wa'){ const d=$('#f-phone').value.replace(/\D/g,''); if(!d) return ''; const m=$('#f-msg').value.trim(); return 'https://wa.me/'+d+(m?'?text='+encodeURIComponent(m):''); }
+  if(t==='wifi'){ const s=$('#f-ssid').value; if(!s) return ''; const sec=$('#f-sec').value; const p=$('#f-pass').value; return 'WIFI:T:'+sec+';S:'+wifiEsc(s)+';'+(sec==='nopass'?'':'P:'+wifiEsc(p)+';')+';'; }
+  return $('#f-text').value;
+}
+if(window.qrcode && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+function makeQR(text){ const q=qrcode(0,'Q'); q.addData(text,'Byte'); q.make(); return q; }
+
+/* ---------- escena ---------- */
+const canvas=$('#scene'), stage=$('#stage');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true, alpha:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
+/* las sombras solo se recalculan cuando algo se mueve (ver frame) */
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFShadowMap; renderer.shadowMap.autoUpdate=false;
+const scene=new THREE.Scene();
+const camera=new THREE.OrthographicCamera(-10,10,10,-10,0.1,1000);
+const hemi=new THREE.HemisphereLight(0xffffff,0xbfae94,0.6); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff4e2,0.7); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.03; scene.add(sun); scene.add(sun.target);
+
+const GEO_BOX=new THREE.BoxGeometry(1,1,1);
+const GEO_BASE=new THREE.BoxGeometry(1,1,1).translate(0,0.5,0);
+const GEO_BLADE=new THREE.BoxGeometry(0.13,1,0.13).translate(0,0.5,0);
+const mat=()=>new THREE.MeshLambertMaterial({color:0xffffff});
+const MAT_SLAB=new THREE.MeshLambertMaterial({color:0xd8cdbb});
+
+/* Hojas animadas en la GPU: cada hoja lleva su posición de árbol y de QR como atributos,
+   y el shader las interpola con uK. Así el plegado no hace trabajo por hoja en JavaScript. */
+const LEAF_U={uK:{value:0}, uGrow:{value:1}, uStep:{value:0.7}};
+const LEAF_GLSL=`
+attribute vec3 aTree; attribute vec3 aQr; attribute vec4 aP; attribute float aFlag; attribute vec3 aColT; attribute vec3 aColQ;
+uniform float uK; uniform float uGrow; uniform float uStep;
+vec3 lPos; vec3 lScl; mat3 lRot; float lCf;
+float eIO(float t){ if(t<0.5) return 4.0*t*t*t; float v=-2.0*t+2.0; return 1.0-v*v*v*0.5; }
+float eBack(float t){ float u=t-1.0; return 1.0+2.5*u*u*u+1.5*u*u; }
+mat3 rotAxis(vec3 a, float ang){ float s=sin(ang), c=cos(ang), oc=1.0-c;
+  return mat3(oc*a.x*a.x+c, oc*a.x*a.y+a.z*s, oc*a.z*a.x-a.y*s,
+              oc*a.x*a.y-a.z*s, oc*a.y*a.y+c, oc*a.y*a.z+a.x*s,
+              oc*a.z*a.x+a.y*s, oc*a.y*a.z-a.x*s, oc*a.z*a.z+c); }
+void leafCompute(){
+  float g=eBack(clamp((uGrow-aP.y-0.1)/0.4,0.0,1.0));
+  float lt=clamp((uK-aP.x)/0.6,0.0,1.0); float e=eIO(lt); float arc=sin(3.14159265*e)*aP.w;
+  float b=uStep*0.92*g;
+  lPos=mix(aTree,aQr,e);
+  if(aFlag>0.5){ lPos.y+=arc; float sx=b+(1.0-b)*e; float sy=b+(0.3-b)*e;
+    lScl=vec3(max(sx,0.0001),max(sy,0.0001),max(sx,0.0001)); lCf=eIO(clamp((lt-0.2)/0.8,0.0,1.0)); }
+  else { lPos.y+=arc*0.5; lScl=vec3(max(b*(1.0-e),0.0001)); lCf=0.0; }
+  lRot=rotAxis(vec3(0.0,0.928,0.371), sin(3.14159265*e)*aP.z);
+}
+`;
+function leafHook(sh, lambert){
+  sh.uniforms.uK=LEAF_U.uK; sh.uniforms.uGrow=LEAF_U.uGrow; sh.uniforms.uStep=LEAF_U.uStep;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\n'+LEAF_GLSL);
+  if(lambert){
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <beginnormal_vertex>','vec3 objectNormal = lRot * vec3(normal);')
+      .replace('#include <begin_vertex>','vec3 transformed = lRot * (position*lScl) + lPos;')
+      .replace('#include <color_vertex>','leafCompute();\n#include <color_vertex>\nvColor.xyz = mix(aColT,aColQ,lCf);');
+  } else {
+    sh.vertexShader=sh.vertexShader.replace('#include <begin_vertex>','leafCompute();\nvec3 transformed = lRot * (position*lScl) + lPos;');
+  }
+}
+const LEAF_MAT=new THREE.MeshLambertMaterial({color:0xffffff}); LEAF_MAT.onBeforeCompile=sh=>leafHook(sh,true);
+const LEAF_DEPTH=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}); LEAF_DEPTH.onBeforeCompile=sh=>leafHook(sh,false);
+
+let W=null; /* mundo actual */
+const LIGHT_TOP=0.45, DARK_TOP=0.65;
+const tmpM=new THREE.Matrix4(), tmpP=new THREE.Vector3(), tmpS=new THREE.Vector3(), tmpQ=new THREE.Quaternion(), tmpE=new THREE.Euler(), tmpC=new THREE.Color(), tmpV=new THREE.Vector3(), AXIS_Y=new THREE.Vector3(0,1,0);
+const Q_ID=new THREE.Quaternion();
+
+function disposeWorld(){ if(!W) return; W.meshes.forEach(m=>{ scene.remove(m); if(m.dispose) m.dispose(); if(m.material!==MAT_SLAB&&m.material!==LEAF_MAT) m.material.dispose(); });
+  if(W.leafGeo) W.leafGeo.dispose(); }
+
+function buildWorld(text){
+  const q=makeQR(text), m=q.getModuleCount(), QZ=3, n=m+QZ*2;
+  const seed=hashStr(text), r=rng(seed);
+  const cx=c=>c-n/2+0.5;
+  const isFinder=(rr,cc)=>(rr<7&&cc<7)||(rr<7&&cc>=m-7)||(rr>=m-7&&cc<7);
+  const cells=[];
+  for(let rr=0;rr<n;rr++) for(let cc=0;cc<n;cc++){
+    const qr_=rr-QZ, qc=cc-QZ, inside=qr_>=0&&qc>=0&&qr_<m&&qc<m;
+    const dark=inside&&q.isDark(qr_,qc);
+    cells.push({x:cx(cc), z:cx(rr), dark, finder:dark&&isFinder(qr_,qc), r:r()});
+  }
+  const w={q,m,n,text,seed,cells,meshes:[]};
+
+  /* losa base */
+  const slab=new THREE.Mesh(new THREE.BoxGeometry(n+0.6,1.4,n+0.6),MAT_SLAB);
+  slab.position.y=-0.7; slab.receiveShadow=true; scene.add(slab); w.meshes.push(slab);
+
+  /* suelo: un bloque por módulo */
+  const ground=new THREE.InstancedMesh(GEO_BASE,mat(),cells.length); ground.receiveShadow=true; ground.castShadow=true;
+  cells.forEach((c,i)=>{ tmpM.makeScale(1,c.dark?DARK_TOP:LIGHT_TOP,1); tmpM.setPosition(c.x,0,c.z); ground.setMatrixAt(i,tmpM); ground.setColorAt(i,tmpC.set('#fff')); });
+  scene.add(ground); w.meshes.push(ground); w.ground=ground;
+
+  /* hierba sobre los módulos oscuros */
+  const blades=[];
+  cells.forEach(c=>{ if(!c.dark) return; const k=1+Math.floor(r()*2.4); for(let j=0;j<k;j++) blades.push({x:c.x+(r()-.5)*0.75, z:c.z+(r()-.5)*0.75, h:0.35+r()*0.75, q:new THREE.Quaternion().setFromAxisAngle(AXIS_Y,r()*Math.PI), r:r()}); });
+  const grass=new THREE.InstancedMesh(GEO_BLADE,mat(),Math.max(1,blades.length)); grass.castShadow=true;
+  scene.add(grass); w.meshes.push(grass); w.grass=grass; w.blades=blades;
+
+  /* copa del árbol */
+  const step=Math.max(0.62, n/52), H=DARK_TOP+n*0.5, R=n*0.3;
+  const blobs=[{x:0,y:H,z:0,r:R}];
+  for(let i=0;i<7;i++){ const a=r()*Math.PI*2, d=R*(0.45+r()*0.25); blobs.push({x:Math.cos(a)*d, y:H+(r()-.35)*R*0.8, z:Math.sin(a)*d, r:R*(0.48+r()*0.22)}); }
+  const lim=n/2-0.6;
+  const inside=(ix,iy,iz)=>{ const x=ix*step, y=iy*step, z=iz*step; if(Math.abs(x)>lim||Math.abs(z)>lim) return false;
+    const th=0.9+0.2*h3(ix,iy,iz);
+    for(const b of blobs){ const dx=x-b.x, dy=(y-b.y)/0.85, dz=z-b.z; if(dx*dx+dy*dy+dz*dz < b.r*b.r*th*th) return true; } return false; };
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9; blobs.forEach(b=>{minX=Math.min(minX,b.x-b.r,b.z-b.r);maxX=Math.max(maxX,b.x+b.r,b.z+b.r);minY=Math.min(minY,b.y-b.r);maxY=Math.max(maxY,b.y+b.r);});
+  const leaves=[];
+  const i0=Math.floor(minX/step)-1,i1=Math.ceil(maxX/step)+1,j0=Math.floor(minY/step)-1,j1=Math.ceil(maxY/step)+1;
+  for(let ix=i0;ix<=i1;ix++) for(let iy=j0;iy<=j1;iy++) for(let iz=i0;iz<=i1;iz++){
+    if(!inside(ix,iy,iz)) continue;
+    if(inside(ix+1,iy,iz)&&inside(ix-1,iy,iz)&&inside(ix,iy+1,iz)&&inside(ix,iy-1,iz)&&inside(ix,iy,iz+1)&&inside(ix,iy,iz-1)) continue;
+    if(h3(ix+7,iy+3,iz+11)<0.12) continue;
+    leaves.push({tx:ix*step, ty:iy*step, tz:iz*step});
+  }
+  /* módulos de datos oscuros que las hojas van a cubrir */
+  const targets=cells.filter(c=>c.dark&&!c.finder);
+  while(leaves.length<targets.length){ const b=leaves[Math.floor(r()*leaves.length)]; leaves.push({tx:b.tx+(r()-.5)*step, ty:b.ty+(r()-.5)*step, tz:b.tz+(r()-.5)*step}); }
+  const ang=(x,z)=>Math.atan2(z,x);
+  const sortedLeaves=leaves.map((l,i)=>i).sort((a,b)=>ang(leaves[a].tx,leaves[a].tz)-ang(leaves[b].tx,leaves[b].tz));
+  const sortedT=targets.slice().sort((a,b)=>ang(a.x,a.z)-ang(b.x,b.z));
+  const maxD=Math.hypot(n/2,n/2);
+  leaves.forEach(l=>{ l.target=null; l.delay=0.15+r()*0.25; l.gx=(r()-.5)*n*0.6; l.gz=(r()-.5)*n*0.6; l.spin=(r()-.5)*Math.PI*2; l.arc=1+r()*3; l.r=r(); l.r2=r(); });
+  sortedT.forEach((t,j)=>{ const l=leaves[sortedLeaves[Math.floor(j*leaves.length/sortedT.length)]]; l.target=t; l.delay=r()*0.22+0.18*Math.hypot(t.x,t.z)/maxD; });
+  const L=leaves.length, lg=new THREE.BoxGeometry(1,1,1);
+  const aTree=new Float32Array(L*3), aQr=new Float32Array(L*3), aP=new Float32Array(L*4), aFlag=new Float32Array(L);
+  leaves.forEach((l,i)=>{
+    l.gd=clamp((l.ty-DARK_TOP)/(maxY-DARK_TOP))*0.55;
+    aTree.set([l.tx,l.ty,l.tz],i*3);
+    if(l.target){ aQr.set([l.target.x,DARK_TOP+0.15,l.target.z],i*3); aFlag[i]=1; } else aQr.set([l.gx,DARK_TOP,l.gz],i*3);
+    aP.set([l.delay,l.gd,l.spin,l.arc],i*4);
+  });
+  lg.setAttribute('aTree',new THREE.InstancedBufferAttribute(aTree,3));
+  lg.setAttribute('aQr',new THREE.InstancedBufferAttribute(aQr,3));
+  lg.setAttribute('aP',new THREE.InstancedBufferAttribute(aP,4));
+  lg.setAttribute('aFlag',new THREE.InstancedBufferAttribute(aFlag,1));
+  lg.setAttribute('aColT',new THREE.InstancedBufferAttribute(new Float32Array(L*3),3));
+  lg.setAttribute('aColQ',new THREE.InstancedBufferAttribute(new Float32Array(L*3),3));
+  const lm=new THREE.InstancedMesh(lg,LEAF_MAT,L); lm.castShadow=true; lm.receiveShadow=true; lm.frustumCulled=false;
+  lm.customDepthMaterial=LEAF_DEPTH;
+  tmpM.identity(); tmpC.set('#fff'); for(let i=0;i<L;i++){ lm.setMatrixAt(i,tmpM); lm.setColorAt(i,tmpC); }
+  scene.add(lm); w.meshes.push(lm); w.leafMesh=lm; w.leafGeo=lg; w.leaves=leaves;
+  LEAF_U.uStep.value=step;
+
+  /* tronco y ramas */
+  const wood=[]; const tTop=H+R*0.15, lean=(r()-.5)*2;
+  const ts=step*0.9;
+  for(let y=DARK_TOP+ts/2; y<tTop; y+=ts){ const t=(y-DARK_TOP)/(tTop-DARK_TOP), x=Math.sin(t*2.2)*lean*t;
+    const thick = t<0.55 ? 1 : 0;
+    if(thick){ for(const ox of[-0.5,0.5]) for(const oz of[-0.5,0.5]) wood.push({x:x+ox*ts,y,z:oz*ts,s:ts}); }
+    else wood.push({x,y,z:0,s:ts}); }
+  for(let b=0;b<6;b++){ const t=0.42+r()*0.45, a=r()*Math.PI*2, len=R*(0.55+r()*0.35); let x=Math.sin(t*2.2)*lean*t, y=DARK_TOP+t*(tTop-DARK_TOP), z=0; const s=ts*0.7;
+    for(let d=0; d<len; d+=s){ x+=Math.cos(a)*s*0.85; z+=Math.sin(a)*s*0.85; y+=s*0.55; wood.push({x,y,z,s}); } }
+  const wm=new THREE.InstancedMesh(GEO_BOX,mat(),wood.length); wm.castShadow=true;
+  wood.forEach((v,i)=>{ v.gd=clamp((v.y-DARK_TOP)/(maxY-DARK_TOP))*0.45; wm.setColorAt(i,jitter(TRUNK[i%TRUNK.length],r,0.02,0.1,0.08)); });
+  wm.instanceColor.needsUpdate=true;
+  scene.add(wm); w.meshes.push(wm); w.woodMesh=wm; w.wood=wood;
+
+  /* hojas que caen */
+  const PN=Math.round(n*1.6), parts=[];
+  for(let i=0;i<PN;i++) parts.push({x:(r()-.5)*R*2, y:H-R*0.3+r()*R, z:(r()-.5)*R*2, vy:0.6+r()*0.9, ph:r()*6.28, r:r(), t:r()});
+  const pm=new THREE.InstancedMesh(GEO_BOX,mat(),PN); pm.castShadow=false;
+  scene.add(pm); w.meshes.push(pm); w.partMesh=pm; w.parts=parts; w.H=H; w.R=R; w.step=step; w.maxY=maxY;
+
+  /* cámara y luz */
+  w.viewTree=Math.max(n*1.5,(maxY)*1.25); w.viewQR=n*1.3; w.targetY=maxY*0.42;
+  sun.shadow.camera.left=-n; sun.shadow.camera.right=n; sun.shadow.camera.top=n; sun.shadow.camera.bottom=-n; sun.shadow.camera.near=0.5; sun.shadow.camera.far=n*6; sun.shadow.camera.updateProjectionMatrix();
+  return w;
+}
+
+/* colores según estación y color elegido */
+function paint(){
+  if(!W) return;
+  const se=SEASONS[state.season], base=SWATCHES[state.swatch].c, r=rng(W.seed^0x9e37);
+  const useMix = state.season==='autumn' && state.swatch===3;
+  /* el piso usa el mismo color que las hojas, un poco más oscuro */
+  const baseQR=qrTone(new THREE.Color(base), ()=>0.5);
+  const finderQR=finderTone(baseQR);
+  const floorHex=()=> useMix ? AUTUMN_MIX[Math.floor(r()*AUTUMN_MIX.length)] : base;
+  const floor=h=>{ const c=jitter(h,r,0.03,0.1,0.12), o={}; c.getHSL(o); return c.setHSL(o.h,o.s,clamp(o.l-0.07,0.08,0.9)); };
+  W.cells.forEach(c=>{
+    c.colT = c.dark ? floor(floorHex()) : jitter('#ECE5D8',r,0.01,0.05,0.05);
+    c.colQ = c.dark ? (c.finder ? finderQR.clone() : baseQR.clone()) : new THREE.Color('#F8F4EC');
+  });
+  W.blades.forEach(b=>{ b.col=jitter(floorHex(),r,0.04,0.15,0.2); });
+  const aT=W.leafGeo.attributes.aColT, aQ=W.leafGeo.attributes.aColQ;
+  W.leaves.forEach((l,i)=>{ const h = useMix ? AUTUMN_MIX[Math.floor(l.r2*AUTUMN_MIX.length)] : base; const t=jitter(h,r,0.03,0.12,0.16), q=qrTone(new THREE.Color(h),r); /* el tono del QR sale del color elegido, no de la hoja variada: con colores casi blancos el tono variado podía salir rojo */
+    aT.setXYZ(i,t.r,t.g,t.b); aQ.setXYZ(i,q.r,q.g,q.b); });
+  aT.needsUpdate=true; aQ.needsUpdate=true;
+  W.parts.forEach((p,i)=>{ const h = useMix ? AUTUMN_MIX[Math.floor(p.r*AUTUMN_MIX.length)] : base; W.partMesh.setColorAt(i, jitter(h,r,0.03,0.1,0.1)); });
+  W.partMesh.instanceColor.needsUpdate=true;
+  W.blades.forEach((b,i)=>W.grass.setColorAt(i,b.col)); if(W.grass.instanceColor) W.grass.instanceColor.needsUpdate=true;
+  dirty=true; scheduleVerify();
+}
+
+/* ---------- animación ---------- */
+let k=0, kTarget=0, grow=1, dirty=true, last=performance.now(), verifyPending=false, verifyWait=0;
+const TRANS=reduced?0.01:1.8;
+
+/* Suelo, hierba y tronco: solo se tocan las partes cuyo valor cambió desde el último cuadro. */
+function setStatic(force){
+  const w=W, ge=easeIO(clamp((k-0.3)/0.6)), be=easeIO(clamp(k/0.45)), te=easeIO(clamp((k-0.08)/0.5));
+  if(force||ge!==w._ge){ w._ge=ge;
+    const cells=w.cells; for(let i=0;i<cells.length;i++){ const c=cells[i]; tmpC.copy(c.colT).lerp(c.colQ,ge); w.ground.setColorAt(i,tmpC); }
+    w.ground.instanceColor.needsUpdate=true; }
+  if(force||be!==w._be||grow!==w._bg){ w._be=be; w._bg=grow;
+    const bl=w.blades; for(let i=0;i<bl.length;i++){ const b=bl[i]; const g=grow<1?easeOutBack(clamp(grow*1.6-b.r*0.6)):1; const s=Math.max(0.0001,(1-be)*g);
+      tmpP.set(b.x,DARK_TOP,b.z); tmpS.set(s,b.h*s,s); tmpM.compose(tmpP,b.q,tmpS); w.grass.setMatrixAt(i,tmpM); }
+    w.grass.instanceMatrix.needsUpdate=true; }
+  if(force||te!==w._te||grow!==w._wg){ w._te=te; w._wg=grow;
+    const wd=w.wood; for(let i=0;i<wd.length;i++){ const v=wd[i]; const g=clamp((grow-v.gd)/0.35); const s=Math.max(0.0001,v.s*easeOutBack(g)*(1-te));
+      tmpP.set(v.x*(1-te), DARK_TOP+(v.y-DARK_TOP)*(1-te*0.9), v.z*(1-te)); tmpS.set(s,s,s); tmpM.compose(tmpP,Q_ID,tmpS); w.woodMesh.setMatrixAt(i,tmpM); }
+    w.woodMesh.instanceMatrix.needsUpdate=true; }
+}
+
+function updateParticles(dt){
+  const w=W, vis=(1-clamp(k/0.15))*clamp(grow*1.3-0.3);
+  if(vis===0&&w._pv===0) return; w._pv=vis;
+  w.parts.forEach((p,i)=>{
+    if(!reduced){ p.y-=p.vy*dt; p.ph+=dt*1.7; }
+    if(p.y<DARK_TOP){ p.y=w.H-w.R*0.2+Math.random()*w.R*0.6; p.x=(Math.random()-.5)*w.R*1.8; p.z=(Math.random()-.5)*w.R*1.8; }
+    const s=Math.max(0.0001,0.32*vis);
+    tmpP.set(p.x+Math.sin(p.ph)*0.6, p.y, p.z+Math.cos(p.ph*0.8)*0.6); tmpE.set(p.ph,p.ph*0.7,0); tmpQ.setFromEuler(tmpE); tmpS.set(s,s*0.4,s);
+    tmpM.compose(tmpP,tmpQ,tmpS); w.partMesh.setMatrixAt(i,tmpM);
+  });
+  w.partMesh.instanceMatrix.needsUpdate=true;
+}
+
+function placeCamera(){
+  const w=W, ck=easeIO(clamp((k-0.04)/0.78));
+  const theta=Math.PI/4*(1-ck) - ck*0, phi=1.0*(1-ck)+0.0002;
+  const view=w.viewTree+(w.viewQR-w.viewTree)*ck, ty=w.targetY*(1-ck)+DARK_TOP*ck;
+  const D=w.n*4;
+  /* en modo QR el código sube un poco para dejar libre la etiqueta de abajo */
+  const tz=ck*w.n*0.045;
+  camera.position.set(Math.sin(phi)*Math.sin(theta)*D, ty+Math.cos(phi)*D, Math.sin(phi)*Math.cos(theta)*D+tz);
+  tmpV.set(-Math.sin(theta),0,-Math.cos(theta));
+  camera.up.set(0,1,0).multiplyScalar(Math.sin(phi)).addScaledVector(tmpV,Math.cos(phi)).normalize();
+  camera.lookAt(0,ty,tz);
+  const asp=stageW/Math.max(1,stageH);
+  let hw,hh; if(asp>=1){ hh=view/2; hw=hh*asp; } else { hw=view/2; hh=hw/asp; }
+  camera.left=-hw; camera.right=hw; camera.top=hh; camera.bottom=-hh; camera.near=0.1; camera.far=D*3; camera.updateProjectionMatrix();
+  /* luz: de lado para el árbol, cenital y plana para el QR */
+  const n=w.n; sun.position.set(n*0.7*(1-ck), n*1.6, n*0.45*(1-ck)+0.01); sun.target.position.set(0,0,0);
+  sun.intensity=0.72-0.5*ck; hemi.intensity=0.58+0.2*ck;
+}
+
+let stageW=1, stageH=1, frameNo=0;
+function resize(){ const r=stage.getBoundingClientRect(); stageW=r.width; stageH=r.height; renderer.setSize(r.width,r.height,false); dirty=true; }
+new ResizeObserver(resize).observe(stage);
+
+function frame(now){
+  const dt=Math.min(0.1,(now-last)/1000); last=now;
+  if(W){
+    let moving=false, settled=false;
+    if(k!==kTarget){ const d=dt/TRANS; k = kTarget>k ? Math.min(kTarget,k+d) : Math.max(kTarget,k-d); moving=true; if(k===kTarget){ settled=true; onSettle(); } }
+    if(grow<1){ grow=Math.min(1,grow+dt/(reduced?0.01:1.4)); moving=true; }
+    LEAF_U.uK.value=k; LEAF_U.uGrow.value=grow;
+    const wasDirty=dirty;
+    if(moving||dirty){ setStatic(dirty); dirty=false; }
+    /* con el QR quieto en pantalla no hace falta redibujar */
+    if(moving||wasDirty||settled||k<1){
+      updateParticles(dt);
+      placeCamera();
+      /* sombras: en cada cambio, y cada 2 cuadros durante la primera mitad del plegado */
+      if(wasDirty||settled||(moving&&k<0.6&&(frameNo++&1)===0)) renderer.shadowMap.needsUpdate=true;
+      renderer.render(scene,camera);
+    }
+    if(verifyPending && k===1 && grow===1){ if(++verifyWait>3){ verifyPending=false; setTimeout(()=>{ if(k===1) verifyNow(); else verifyPending=true; },180); } }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- verificación de escaneo ---------- */
+let vCanvas=null;
+function scheduleVerify(){ verifyPending=true; verifyWait=0; const v=$('#verify'); if(kTarget===1){ v.hidden=false; v.className='verify'; v.textContent='Comprobando lectura…'; } else v.hidden=true; }
+function verifyNow(){
+  const v=$('#verify');
+  if(!window.jsQR){ v.hidden=true; return; }
+  const src=renderer.domElement, S=520;
+  vCanvas=vCanvas||document.createElement('canvas'); vCanvas.width=S; vCanvas.height=Math.max(1,Math.round(S*src.height/src.width));
+  const x=vCanvas.getContext('2d',{willReadFrequently:true});
+  x.fillStyle=getComputedStyle(document.body).backgroundColor; x.fillRect(0,0,vCanvas.width,vCanvas.height);
+  x.drawImage(src,0,0,vCanvas.width,vCanvas.height);
+  const d=x.getImageData(0,0,vCanvas.width,vCanvas.height);
+  let res=null; try{ res=jsQR(d.data,vCanvas.width,vCanvas.height,{inversionAttempts:'dontInvert'}); }catch(e){}
+  v.hidden=false;
+  if(res && res.data===W.text){ v.className='verify ok'; v.textContent='Se lee bien con un teléfono'; }
+  else { v.className='verify warn'; v.textContent='Lectura dudosa: prueba un color más intenso'; }
+}
+
+/* ---------- interacción ---------- */
+function setMode(toQR){
+  kTarget=toQR?1:0;
+  $('#toggle').textContent=toQR?'Ver el árbol':'Ver el código QR';
+  $('#hint').textContent=toQR?'Toca el QR para ver el árbol':'Toca el árbol para ver el QR';
+  Sound.whoosh();
+  if(toQR) scheduleVerify(); else $('#verify').hidden=true;
+}
+function onSettle(){ if(k===1) scheduleVerify(); }
+stage.addEventListener('click',()=>setMode(kTarget!==1));
+$('#hint').addEventListener('click',e=>{ e.stopPropagation(); setMode(kTarget!==1); });
+$('#toggle').addEventListener('click',()=>setMode(kTarget!==1));
+
+function persist(){ const o={type:state.type,season:state.season,swatch:state.swatch}; ['url','phone','msg','ssid','pass','sec','text'].forEach(k=>o[k]=$('#f-'+k).value); store.set(o); }
+
+let rebuildTimer=null;
+function refresh(immediate){
+  clearTimeout(rebuildTimer);
+  rebuildTimer=setTimeout(()=>{
+    const text=buildText(); const meta=$('#meta');
+    persist();
+    if(!text){ meta.className='meta err'; meta.textContent= state.type==='wa'?'Escribe el número de WhatsApp.': state.type==='wifi'?'Escribe el nombre de la red.':'Escribe algo para generar el código.'; return; }
+    if(W && text===W.text) return;
+    let w; try{ disposeWorld(); w=buildWorld(text); }catch(e){ meta.className='meta err'; meta.textContent='Es demasiado largo para un QR. Acórtalo por debajo de unos 1.600 caracteres.'; W=null; return; }
+    W=w; grow = kTarget===1 ? 1 : (reduced?1:0); paint();
+    const bytes=new TextEncoder().encode(text).length, ver=(w.m-17)/4;
+    meta.className='meta';
+    meta.innerHTML='';
+    const l1=document.createElement('div'); l1.innerHTML='<b></b>'; l1.firstChild.textContent=text;
+    const l2=document.createElement('div'); l2.textContent='Versión '+ver+' · '+w.m+'×'+w.m+' módulos · corrección Q (25 %) · '+bytes+' bytes';
+    meta.append(l1,l2);
+  }, immediate?0:350);
+}
+
+/* pestañas de tipo */
+function setType(t){ state.type=t;
+  document.querySelectorAll('#types button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.type===t)));
+  document.querySelectorAll('[data-for]').forEach(el=>el.hidden=el.dataset.for!==t);
+  refresh(true); }
+document.querySelectorAll('#types button').forEach(b=>b.addEventListener('click',()=>setType(b.dataset.type)));
+$('#form').addEventListener('input',()=>refresh(false));
+$('#form').addEventListener('submit',e=>{ e.preventDefault(); refresh(true); });
+
+/* estaciones y colores */
+function renderSwatches(){ const box=$('#swatches'); box.innerHTML='';
+  SWATCHES.forEach((s,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='sw'; b.style.background=s.c; b.title=s.name; b.setAttribute('aria-label',s.name); b.setAttribute('aria-pressed',String(i===state.swatch));
+    b.addEventListener('click',()=>{ state.swatch=i; renderSwatches(); persist(); paint(); }); box.appendChild(b); }); }
+function setSeason(s,keep){ state.season=s; if(!keep) state.swatch=SEASONS[s].swatch;
+  document.querySelectorAll('#seasons [data-season]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.season===s)));
+  renderSwatches(); persist(); paint(); }
+document.querySelectorAll('#seasons [data-season]').forEach(b=>b.addEventListener('click',()=>setSeason(b.dataset.season)));
+
+/* ---------- sonido ambiente ---------- */
+const Sound={ctx:null,on:false,
+  start(){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false; if(!this.ctx) this.ctx=new AC(); this.ctx.resume(); this.on=true; this.wind(); this.loop(); return true; },
+  stop(){ this.on=false; clearTimeout(this.t); if(this.wn){ const c=this.ctx, n=this.wn; this.wg.gain.setTargetAtTime(0,c.currentTime,0.3); setTimeout(()=>{try{n.stop();}catch(e){}},1500); this.wn=null; } },
+  brown(){ if(this._b) return this._b; const c=this.ctx,b=c.createBuffer(1,c.sampleRate*3,c.sampleRate),d=b.getChannelData(0); let l=0; for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; l=(l+0.02*w)/1.02; d[i]=l*3.5; } return this._b=b; },
+  white(){ if(this._w) return this._w; const c=this.ctx,b=c.createBuffer(1,c.sampleRate,c.sampleRate),d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; return this._w=b; },
+  wind(){ const c=this.ctx,s=c.createBufferSource(); s.buffer=this.brown(); s.loop=true; const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=650;
+    const g=c.createGain(); g.gain.value=0; g.gain.setTargetAtTime(0.08,c.currentTime,0.8); const lfo=c.createOscillator(), lg=c.createGain(); lfo.frequency.value=0.13; lg.gain.value=0.035; lfo.connect(lg); lg.connect(g.gain); lfo.start();
+    s.connect(f); f.connect(g); g.connect(c.destination); s.start(); this.wn=s; this.wg=g; },
+  loop(){ if(!this.on) return; if(state.season==='autumn') this.rustle(); else this.bird(); this.t=setTimeout(()=>this.loop(),2200+Math.random()*3800); },
+  bird(){ const c=this.ctx,t0=c.currentTime+0.05,n=2+Math.floor(Math.random()*3),base=2500+Math.random()*1300;
+    for(let i=0;i<n;i++){ const o=c.createOscillator(),g=c.createGain(),t=t0+i*0.14; o.type='sine'; o.frequency.setValueAtTime(base,t); o.frequency.exponentialRampToValueAtTime(base*(1.25+Math.random()*0.2),t+0.07);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.03,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+0.1); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.12); } },
+  rustle(){ const c=this.ctx,s=c.createBufferSource(); s.buffer=this.white(); const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2800+Math.random()*1500; f.Q.value=0.8;
+    const g=c.createGain(),t=c.currentTime; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.035,t+0.2); g.gain.exponentialRampToValueAtTime(0.0001,t+0.75);
+    s.connect(f); f.connect(g); g.connect(c.destination); s.start(t); s.stop(t+0.8); },
+  whoosh(){ if(!this.on) return; const c=this.ctx,s=c.createBufferSource(); s.buffer=this.white(); const f=c.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.2; const t=c.currentTime;
+    f.frequency.setValueAtTime(300,t); f.frequency.exponentialRampToValueAtTime(2200,t+0.7); const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.09,t+0.25); g.gain.exponentialRampToValueAtTime(0.0001,t+0.95);
+    s.connect(f); f.connect(g); g.connect(c.destination); s.start(t); s.stop(t+1); }
+};
+$('#sound').addEventListener('click',()=>{ const b=$('#sound'); if(Sound.on){ Sound.stop(); b.setAttribute('aria-pressed','false'); $('#snd-wave').setAttribute('opacity','.3'); }
+  else if(Sound.start()){ b.setAttribute('aria-pressed','true'); $('#snd-wave').setAttribute('opacity','1'); } });
+
+/* ---------- descargas ---------- */
+let downloads=null;
+(async()=>{ try{ if(window.claude && window.claude.use) downloads=await window.claude.use('downloads'); }catch(e){} })();
+function slug(){ const t=W?W.text:'qr'; return (t.replace(/^https?:\/\//,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,40)||'qr'); }
+function showFallback(url, isSvg){ const m=document.createElement('div'); m.className='modal';
+  m.innerHTML='<div class="box"><img alt="Vista previa del archivo"><p></p><button class="primary" type="button">Cerrar</button></div>';
+  m.querySelector('img').src=url; m.querySelector('p').textContent= 'Haz clic derecho (o mantén pulsado en el móvil) sobre la imagen y elige "Guardar imagen".';
+  m.addEventListener('click',e=>{ if(e.target===m||e.target.tagName==='BUTTON') m.remove(); }); document.body.appendChild(m); }
+async function offer(filename, blob, previewUrl){
+  if(downloads){ try{ await downloads.save({filename, data:blob}); toast('Archivo guardado'); return; }
+    catch(e){ const c=e&&e.code; if(c==='declined'){ toast('Descarga cancelada'); return; } if(c==='rate_limited'){ toast('Espera un momento y vuelve a intentarlo'); return; } } }
+  showFallback(previewUrl);
+}
+function moduleColors(bw){ const r=rng(W.seed^0x51); const out=[]; const se=SEASONS[state.season];
+  const useMix=state.season==='autumn'&&state.swatch===3; const base=SWATCHES[state.swatch].c;
+  for(let i=0;i<W.m;i++){ out.push([]); for(let j=0;j<W.m;j++){ if(!W.q.isDark(i,j)){ out[i].push(null); continue; }
+    if(bw){ out[i].push('#111111'); continue; }
+    const fin=(i<7&&j<7)||(i<7&&j>=W.m-7)||(i>=W.m-7&&j<7);
+    const col= fin ? finderTone(qrTone(new THREE.Color(base),()=>0.5)) : qrTone(new THREE.Color(useMix?AUTUMN_MIX[Math.floor(r()*AUTUMN_MIX.length)]:base),r);
+    out[i].push('#'+col.getHexString()); } } return out; }
+function flatPNG(bw){ const QZ=4, total=W.m+QZ*2, px=Math.max(8,Math.floor(1400/total)), size=px*total;
+  const c=document.createElement('canvas'); c.width=size; c.height=size; const x=c.getContext('2d');
+  x.fillStyle=bw?'#FFFFFF':'#FBF8F2'; x.fillRect(0,0,size,size); const cols=moduleColors(bw);
+  cols.forEach((row,i)=>row.forEach((col,j)=>{ if(!col) return; x.fillStyle=col; x.fillRect((j+QZ)*px,(i+QZ)*px,px,px); }));
+  return c; }
+function flatSVG(){ const QZ=4,total=W.m+QZ*2, cols=moduleColors(false); let s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+total+' '+total+'" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#FBF8F2"/>';
+  cols.forEach((row,i)=>{ let j=0; while(j<row.length){ if(!row[j]){ j++; continue; } let e=j; while(e+1<row.length&&row[e+1]===row[j]) e++; s+='<rect x="'+(j+QZ)+'" y="'+(i+QZ)+'" width="'+(e-j+1)+'" height="1" fill="'+row[j]+'"/>'; j=e+1; } });
+  return s+'</svg>'; }
+document.querySelectorAll('[data-dl]').forEach(b=>b.addEventListener('click',async()=>{
+  if(!W){ toast('Primero escribe un contenido'); return; }
+  const kind=b.dataset.dl;
+  if(kind==='svg'){ const svg=flatSVG(); await offer('tuempresaqr-'+slug()+'.svg', new Blob([svg],{type:'image/svg+xml'}), 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)); return; }
+  const c = kind==='3d' ? (renderer.render(scene,camera), renderer.domElement) : flatPNG(kind==='bw');
+  let src=c;
+  if(kind==='3d'){ src=document.createElement('canvas'); src.width=c.width; src.height=c.height; const x=src.getContext('2d'); x.fillStyle=getComputedStyle(document.body).backgroundColor; x.fillRect(0,0,c.width,c.height); x.drawImage(c,0,0); }
+  const url=src.toDataURL('image/png'); const blob=await new Promise(res=>src.toBlob(res,'image/png'));
+  const name = kind==='3d' ? 'tuempresaqr-arbol-'+slug()+'.png' : 'tuempresaqr-'+slug()+(kind==='bw'?'-bn':'')+'.png';
+  await offer(name, blob, url);
+}));
+
+/* ---------- arranque ---------- */
+setSeason(state.season,true);
+setType(state.type);
+resize();
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
